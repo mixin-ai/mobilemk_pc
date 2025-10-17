@@ -8,6 +8,13 @@
 - 滚动：`scroll` 垂直滚动（水平滚动暂不支持）。
 - 键盘：`key_event`（支持常用键与修饰键）。
 - 文本：`text_input` 通过剪贴板粘贴保证 Unicode（Ctrl+V）。
+ - 新增手势：
+   - `tap` → 左键单击
+   - `doubletap` → 左键双击
+   - `longpress` → 右键单击
+   - `touchstart/touchmove/touchend` → 指针相对移动（不主动按键）
+   - `pinch` → Ctrl+滚轮缩放（按 `dscale` 方向）
+   - `rotate` → 近似为水平滚动：按住 Shift + 垂直滚动
 
 ### 构建与运行（Windows/macOS）
 ```bash

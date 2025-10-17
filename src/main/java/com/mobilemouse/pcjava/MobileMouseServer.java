@@ -60,6 +60,30 @@ public final class MobileMouseServer extends WebSocketServer {
                     if (root.has("ts")) pong.add("ts", root.get("ts"));
                     conn.send(pong.toString());
                     break;
+                case "touchstart":
+                    handleTouchStart(root);
+                    break;
+                case "touchmove":
+                    handleTouchMove(root);
+                    break;
+                case "touchend":
+                    handleTouchEnd(root);
+                    break;
+                case "tap":
+                    handleTap(root);
+                    break;
+                case "doubletap":
+                    handleDoubleTap(root);
+                    break;
+                case "longpress":
+                    handleLongPress(root);
+                    break;
+                case "pinch":
+                    handlePinch(root);
+                    break;
+                case "rotate":
+                    handleRotate(root);
+                    break;
                 case "mouse_move":
                     handleMouseMove(root);
                     break;
@@ -142,6 +166,59 @@ public final class MobileMouseServer extends WebSocketServer {
         if (text != null && !text.isEmpty()) {
             injector.typeText(text);
         }
+    }
+
+    // --- 新增手势类型处理 ---
+    private volatile boolean touching = false;
+
+    private void handleTouchStart(JsonObject root) {
+        touching = true;
+        // 仅标记开始，PC 侧不主动按下左键；具体点击/拖拽由 tap/drag 单独事件触发
+    }
+
+    private void handleTouchMove(JsonObject root) {
+        double dx = root.has("dx") ? root.get("dx").getAsDouble() : 0.0;
+        double dy = root.has("dy") ? root.get("dy").getAsDouble() : 0.0;
+        injector.moveRelative((int)Math.round(dx), (int)Math.round(dy));
+    }
+
+    private void handleTouchEnd(JsonObject root) {
+        touching = false;
+        // 可根据 vx/vy 做惯性滚动，当前版本不在 PC 端处理
+    }
+
+    private void handleTap(JsonObject root) {
+        injector.mouseButton("left", "click");
+    }
+
+    private void handleDoubleTap(JsonObject root) {
+        injector.mouseButton("left", "click");
+        try { Thread.sleep(40); } catch (InterruptedException ignored) {}
+        injector.mouseButton("left", "click");
+    }
+
+    private void handleLongPress(JsonObject root) {
+        injector.mouseButton("right", "click");
+    }
+
+    private void handlePinch(JsonObject root) {
+        // 根据 dscale 映射缩放方向；正为放大，负为缩小（经验值）
+        double dscale = root.has("dscale") ? root.get("dscale").getAsDouble() : 0.0;
+        int steps = (int)Math.round(dscale * 6); // 调整灵敏度因子
+        if (steps == 0) return;
+        injector.setModifiers(true, false, false, false, true); // press CTRL
+        injector.scroll(0, -steps); // 方向可能需按应用调整；这里约定负为缩放放大
+        injector.setModifiers(true, false, false, false, false); // release CTRL
+    }
+
+    private void handleRotate(JsonObject root) {
+        // 旋转映射为水平滚动近似：按住 SHIFT + 垂直滚动
+        double dr = root.has("dr") ? root.get("dr").getAsDouble() : 0.0;
+        int steps = (int)Math.round(dr * 8);
+        if (steps == 0) return;
+        injector.setModifiers(false, false, true, false, true); // press SHIFT
+        injector.scroll(0, steps);
+        injector.setModifiers(false, false, true, false, false); // release SHIFT
     }
 
     private String safe(String s, String def) {
