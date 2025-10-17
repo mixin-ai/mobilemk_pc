@@ -83,41 +83,95 @@ public final class InputInjector {
 
     public void typeText(String text) {
         if (text == null || text.isEmpty()) return;
-        try {
-            // 使用剪贴板粘贴，保证 Unicode 文本（Windows 下 Ctrl+V）
-            StringSelection sel = new StringSelection(text);
-            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, sel);
-            robot.keyPress(KeyEvent.VK_CONTROL);
-            robot.keyPress(KeyEvent.VK_V);
-            robot.keyRelease(KeyEvent.VK_V);
-            robot.keyRelease(KeyEvent.VK_CONTROL);
-        } catch (Exception e) {
-            // 回退：粗略逐字符输入（ASCII 或基本拉丁），复杂文本可能失败
-            for (char ch : text.toCharArray()) {
-                typeChar(ch);
+        StringBuilder bufUnknown = new StringBuilder();
+        for (char ch : text.toCharArray()) {
+            Stroke st = mapChar(ch);
+            if (st == null) {
+                bufUnknown.append(ch);
+                continue;
             }
+            if (bufUnknown.length() > 0) {
+                paste(bufUnknown.toString());
+                bufUnknown.setLength(0);
+            }
+            typeKey(st.code, st.shift);
+        }
+        if (bufUnknown.length() > 0) {
+            paste(bufUnknown.toString());
         }
     }
 
-    private void typeChar(char ch) {
-        // 简单字符映射：字母、数字、空格、常见符号
-        boolean upper = Character.isUpperCase(ch);
-        char base = upper ? ch : Character.toUpperCase(ch);
-        Integer code = KeyMap.toKeyCode(String.valueOf(base));
-        if (code != null) {
-            if (!upper && Character.isLetter(ch)) {
-                // 小写：按下 SHIFT 以得到对应字符，部分布局不适用，仅作为回退
-                robot.keyPress(KeyEvent.VK_SHIFT);
-                robot.keyPress(code);
-                robot.keyRelease(code);
-                robot.keyRelease(KeyEvent.VK_SHIFT);
-                return;
-            }
-            robot.keyPress(code);
-            robot.keyRelease(code);
-            return;
+    private static final class Stroke {
+        final int code; final boolean shift;
+        Stroke(int code, boolean shift) { this.code = code; this.shift = shift; }
+    }
+
+    private Stroke mapChar(char ch) {
+        switch (ch) {
+            case '\n': case '\r': return new Stroke(KeyEvent.VK_ENTER, false);
+            case '\t': return new Stroke(KeyEvent.VK_TAB, false);
+            case '\b': return new Stroke(KeyEvent.VK_BACK_SPACE, false);
+            case ' ': return new Stroke(KeyEvent.VK_SPACE, false);
+            case ',': return new Stroke(KeyEvent.VK_COMMA, false);
+            case '.': return new Stroke(KeyEvent.VK_PERIOD, false);
+            case '/': return new Stroke(KeyEvent.VK_SLASH, false);
+            case '-': return new Stroke(KeyEvent.VK_MINUS, false);
+            case '=': return new Stroke(KeyEvent.VK_EQUALS, false);
+            case '[': return new Stroke(KeyEvent.VK_OPEN_BRACKET, false);
+            case ']': return new Stroke(KeyEvent.VK_CLOSE_BRACKET, false);
+            case ';': return new Stroke(KeyEvent.VK_SEMICOLON, false);
+            case '\'': return new Stroke(KeyEvent.VK_QUOTE, false);
+            case '\\': return new Stroke(KeyEvent.VK_BACK_SLASH, false);
+            case '`': return new Stroke(KeyEvent.VK_BACK_QUOTE, false);
+            case '!': return new Stroke(KeyEvent.VK_1, true);
+            case '@': return new Stroke(KeyEvent.VK_2, true);
+            case '#': return new Stroke(KeyEvent.VK_3, true);
+            case '$': return new Stroke(KeyEvent.VK_4, true);
+            case '%': return new Stroke(KeyEvent.VK_5, true);
+            case '^': return new Stroke(KeyEvent.VK_6, true);
+            case '&': return new Stroke(KeyEvent.VK_7, true);
+            case '*': return new Stroke(KeyEvent.VK_8, true);
+            case '(': return new Stroke(KeyEvent.VK_9, true);
+            case ')': return new Stroke(KeyEvent.VK_0, true);
+            case '_': return new Stroke(KeyEvent.VK_MINUS, true);
+            case '+': return new Stroke(KeyEvent.VK_EQUALS, true);
+            case '{': return new Stroke(KeyEvent.VK_OPEN_BRACKET, true);
+            case '}': return new Stroke(KeyEvent.VK_CLOSE_BRACKET, true);
+            case ':': return new Stroke(KeyEvent.VK_SEMICOLON, true);
+            case '"': return new Stroke(KeyEvent.VK_QUOTE, true);
+            case '<': return new Stroke(KeyEvent.VK_COMMA, true);
+            case '>': return new Stroke(KeyEvent.VK_PERIOD, true);
+            case '?': return new Stroke(KeyEvent.VK_SLASH, true);
+            case '|': return new Stroke(KeyEvent.VK_BACK_SLASH, true);
+            case '~': return new Stroke(KeyEvent.VK_BACK_QUOTE, true);
+            default:
+                if (ch >= 'a' && ch <= 'z') {
+                    return new Stroke(KeyEvent.VK_A + (ch - 'a'), false);
+                }
+                if (ch >= 'A' && ch <= 'Z') {
+                    return new Stroke(KeyEvent.VK_A + (ch - 'A'), true);
+                }
+                if (ch >= '0' && ch <= '9') {
+                    return new Stroke(KeyEvent.VK_0 + (ch - '0'), false);
+                }
+                return null;
         }
-        if (ch == ' ') { robot.keyPress(KeyEvent.VK_SPACE); robot.keyRelease(KeyEvent.VK_SPACE); return; }
-        // 其他基本符号可按需扩展
+    }
+
+    private void typeKey(int code, boolean shift) {
+        if (shift) robot.keyPress(KeyEvent.VK_SHIFT);
+        robot.keyPress(code);
+        robot.keyRelease(code);
+        if (shift) robot.keyRelease(KeyEvent.VK_SHIFT);
+    }
+
+    private void paste(String text) {
+        if (text == null || text.isEmpty()) return;
+        StringSelection sel = new StringSelection(text);
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, sel);
+        robot.keyPress(KeyEvent.VK_CONTROL);
+        robot.keyPress(KeyEvent.VK_V);
+        robot.keyRelease(KeyEvent.VK_V);
+        robot.keyRelease(KeyEvent.VK_CONTROL);
     }
 }
