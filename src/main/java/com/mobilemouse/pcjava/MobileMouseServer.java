@@ -93,6 +93,9 @@ public final class MobileMouseServer extends WebSocketServer {
                 case "scroll":
                     handleScroll(root);
                     break;
+                case "roll":
+                    handleTwoMove(root);
+                    break;
                 case "drag":
                     handleDrag(root);
                     break;
@@ -141,6 +144,21 @@ public final class MobileMouseServer extends WebSocketServer {
         int dx = root.has("dx") ? (int)Math.round(root.get("dx").getAsDouble()) : 0;
         int dy = root.has("dy") ? (int)Math.round(root.get("dy").getAsDouble()) : 0;
         injector.scroll(dx, dy);
+    }
+
+    private void handleTwoMove(JsonObject root) {
+        double dx = root.has("ds") ? root.get("ds").getAsDouble() : 0.0;
+        double dy = root.has("dy") ? root.get("dy").getAsDouble() : 0.0;
+        int vSteps = (int)Math.round(dy * 10); // 调整因子以匹配触摸手势强度
+        int hSteps = (int)Math.round(dx * 10);
+        if (vSteps != 0) {
+            injector.scroll(0, vSteps);
+        }
+        if (hSteps != 0) {
+            injector.setModifiers(false, false, true, false, true); // press SHIFT
+            injector.scroll(0, hSteps);
+            injector.setModifiers(false, false, true, false, false); // release SHIFT
+        }
     }
 
     private void handleKeyEvent(JsonObject root) {

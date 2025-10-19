@@ -28,7 +28,10 @@ public final class InputInjector {
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         nx = Math.max(0, Math.min(nx, screen.width - 1));
         ny = Math.max(0, Math.min(ny, screen.height - 1));
-        robot.mouseMove(nx, ny);
+        Rectangle vb = getVirtualBounds();
+        nx = Math.max(vb.x, Math.min(nx, vb.x + vb.width - 1));
+        ny = Math.max(vb.y, Math.min(ny, vb.y + vb.height - 1));
+         robot.mouseMove(nx, ny);
     }
 
     public void mouseButton(String button, String action) {
@@ -106,6 +109,7 @@ public final class InputInjector {
         Stroke(int code, boolean shift) { this.code = code; this.shift = shift; }
     }
 
+
     private Stroke mapChar(char ch) {
         switch (ch) {
             case '\n': case '\r': return new Stroke(KeyEvent.VK_ENTER, false);
@@ -173,5 +177,26 @@ public final class InputInjector {
         robot.keyPress(KeyEvent.VK_V);
         robot.keyRelease(KeyEvent.VK_V);
         robot.keyRelease(KeyEvent.VK_CONTROL);
+    }
+
+    private Rectangle getVirtualBounds() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice[] devices = ge.getScreenDevices();
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+        for (GraphicsDevice gd : devices) {
+            for (GraphicsConfiguration gc : gd.getConfigurations()) {
+                Rectangle b = gc.getBounds();
+                minX = Math.min(minX, b.x);
+                minY = Math.min(minY, b.y);
+                maxX = Math.max(maxX, b.x + b.width);
+                maxY = Math.max(maxY, b.y + b.height);
+            }
+        }
+        if (minX == Integer.MAX_VALUE) {
+            Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+            return new Rectangle(0, 0, screen.width, screen.height);
+        }
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 }

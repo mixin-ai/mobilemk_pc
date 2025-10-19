@@ -15,6 +15,7 @@
    - `touchstart/touchmove/touchend` → 指针相对移动（不主动按键）
    - `pinch` → Ctrl+滚轮缩放（按 `dscale` 方向）
    - `rotate` → 近似为水平滚动：按住 Shift + 垂直滚动
+   - `two_move` → 双指移动滚动：`dy` 垂直滚动；`dx` 按住 Shift 近似水平滚动
 
 ### 构建与运行（Windows/macOS）
 ```bash
